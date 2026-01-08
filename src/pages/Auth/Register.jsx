@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   EnvelopeIcon,
@@ -7,9 +7,17 @@ import {
   EyeSlashIcon,
   UserIcon,
 } from "@heroicons/react/24/outline";
+import IndigoButton from "@/components/ui/IndigoButton";
+import BackToHomeButton from "@/components/ui/BackToHomeButton";
+import OAuthButtons from "@/components/ui/OAuthButtons";
+import FormDivider from "@/components/ui/FormDivider";
+import { GeneratePassword } from "@/utils/PasswordGenerator";
 
 export default function Register() {
+  // For password hide show
   const [showPassword, setShowPassword] = useState(false);
+
+  // For the form data
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -17,9 +25,56 @@ export default function Register() {
     role: "user",
   });
 
+  // For Password Generators local states
+  const passwordRef = useRef();
+  const [length, setLength] = useState(6);
+  const [isNumbersIncluded, setIsNumbersIncluded] = useState(false);
+  const [isSpecialCharsIncluded, setIsSpecialCharsIncluded] = useState(false);
+  const [generatePasswordButtonClick, setGeneratePasswordButtonClick] =
+    useState(false);
+  const [isPasswordCopied, setIsPasswordCopied] = useState(false);
+
+  // Using the useCallBack hook of it cached the all data memory (this is not for the function calling)
+  const generatePassword = useCallback(() => {
+    const pass = GeneratePassword({
+      length,
+      isNumbersIncluded,
+      isSpecialCharsIncluded,
+    });
+    setFormData((prev) => ({ ...prev, password: pass }));
+  }, [length, isNumbersIncluded, isSpecialCharsIncluded, setFormData]);
+
+  // Applied useEffect for the function calling, call only when generatePasswordButtonClick is true.
+  // else it will run on page only, end up we get the password even generate password button is not clicked.
+  useEffect(() => {
+    if (generatePasswordButtonClick) {
+      // console.log(
+      //   "from calling ",
+      //   length,
+      //   isNumbersIncluded,
+      //   isSpecialCharsIncluded
+      // );
+      generatePassword();
+    }
+  }, [
+    length,
+    isNumbersIncluded,
+    isSpecialCharsIncluded,
+    generatePasswordButtonClick,
+  ]);
+
+  const copyToClipBoard = async () => {
+    setIsPasswordCopied(true);
+    passwordRef.current?.select();
+    await window.navigator.clipboard.writeText(formData.password);
+    // Reset back to "Copy" after 2 seconds
+    setTimeout(() => {
+      setIsPasswordCopied(false);
+    }, 2000);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Handle registration logic here
     console.log("Registration submitted:", formData);
   };
 
@@ -150,6 +205,7 @@ export default function Register() {
                   />
                 </div>
                 <input
+                  ref={passwordRef}
                   id="password"
                   name="password"
                   type={showPassword ? "text" : "password"}
@@ -177,6 +233,61 @@ export default function Register() {
                     />
                   )}
                 </button>
+              </div>
+              <div className="mt-2 text-white">
+                <div className="flex flex-row">
+                  <button
+                    onClick={() => setGeneratePasswordButtonClick(true)}
+                    type="button"
+                    className=" flex-7 bg-gray-700 p-2 rounded-md cursor-pointer hover:bg-gray-600 "
+                  >
+                    Generate Strong Password ✨
+                  </button>
+
+                  <button
+                    disabled={isPasswordCopied || !formData.password}
+                    onClick={copyToClipBoard}
+                    type="button"
+                    className={`flex-3 ml-2 rounded-md cursor-pointer transition-colors ${
+                      isPasswordCopied
+                        ? "bg-green-500 hover:bg-green-400"
+                        : "bg-indigo-500 hover:bg-indigo-400"
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  >
+                    {isPasswordCopied ? "Copied! ✓" : "Copy"}
+                  </button>
+                </div>
+                <div className="flex flex-row mt-2">
+                  <input
+                    type="range"
+                    min={6}
+                    max={25}
+                    className="mt-2 w-full flex-7"
+                    value={length}
+                    onChange={(e) => setLength(Number(e.target.value))}
+                  />
+                  <label className="ml-2 flex-3">Length : {length}</label>
+                </div>
+                <div className="flex flex-row mt-2">
+                  <div className="flex-5">
+                    <input
+                      type="checkbox"
+                      defaultChecked={isNumbersIncluded}
+                      onChange={() => setIsNumbersIncluded((prev) => !prev)}
+                    />
+                    <label className="ml-2">Numbers</label>
+                  </div>
+                  <div className="flex-5">
+                    <input
+                      type="checkbox"
+                      defaultChecked={isSpecialCharsIncluded}
+                      onChange={() =>
+                        setIsSpecialCharsIncluded((prev) => !prev)
+                      }
+                    />
+                    <label className="ml-2">Special Characters</label>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -230,92 +341,26 @@ export default function Register() {
             </div>
 
             {/* Submit Button */}
-            <div>
-              <button
-                type="submit"
-                className="flex w-full justify-center rounded-md bg-indigo-500 px-3 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 transition-colors duration-200"
-              >
-                Create account
-              </button>
-            </div>
+            <IndigoButton
+              disabled={
+                !formData.email || !formData.password || !formData.fullName
+              }
+              title="Create Account"
+              onClick={() => {}}
+            />
           </form>
 
           {/* Divider */}
           <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/10" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-white/5 px-2 text-gray-400">
-                  Or continue with
-                </span>
-              </div>
-            </div>
+            <FormDivider />
 
             {/* Social Login Buttons */}
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                className="inline-flex w-full justify-center rounded-md bg-white/5 px-4 py-2 text-sm font-semibold text-white ring-1 ring-inset ring-white/10 hover:bg-white/10 transition-colors duration-200"
-              >
-                <span className="sr-only">Sign up with Google</span>
-                <svg
-                  className="h-5 w-5"
-                  aria-hidden="true"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
-                </svg>
-              </button>
-
-              <button
-                type="button"
-                className="inline-flex w-full justify-center rounded-md bg-white/5 px-4 py-2 text-sm font-semibold text-white ring-1 ring-inset ring-white/10 hover:bg-white/10 transition-colors duration-200"
-              >
-                <span className="sr-only">Sign up with GitHub</span>
-                <svg
-                  className="h-5 w-5"
-                  aria-hidden="true"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </button>
-            </div>
+            <OAuthButtons />
           </div>
         </div>
 
         {/* Back to home link */}
-        <div className="mt-6 text-center">
-          <Link
-            to="/"
-            className="text-sm font-semibold text-indigo-400 hover:text-indigo-300"
-          >
-            ← Back to home
-          </Link>
-        </div>
+        <BackToHomeButton />
       </div>
 
       {/* Bottom decorative element */}
